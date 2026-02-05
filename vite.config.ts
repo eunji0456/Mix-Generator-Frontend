@@ -19,16 +19,16 @@ export default defineConfig({
   server: {
     proxy: {
       '/v1': {
-        target: 'http://15.165.41.165',
+        target: 'http://3.35.71.175',
         changeOrigin: true,
         ws: true,
       },
       '/media': {
-        target: 'http://15.165.41.165',
+        target: 'http://3.35.71.175',
         changeOrigin: true,
       },
       '/storage': {
-        target: 'http://15.165.41.165',
+        target: 'http://3.35.71.175',
         changeOrigin: true,
       },
     },

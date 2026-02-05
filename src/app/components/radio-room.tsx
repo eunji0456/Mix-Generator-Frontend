@@ -135,7 +135,7 @@ export function RadioRoom({ room, onBack }: RadioRoomProps) {
 
   // Initialize WebSocket
   useEffect(() => {
-    const BACKEND_IP = '15.165.41.165';
+    const BACKEND_IP = '3.35.71.175';
     if (!room?.room_id) {
       setWsError('방 정보를 찾을 수 없습니다.');
       return;

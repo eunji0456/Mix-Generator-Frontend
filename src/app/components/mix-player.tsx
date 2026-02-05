@@ -70,7 +70,7 @@ export function MixPlayer({ mixId, initialData, onBack }: MixPlayerProps) {
     if (!url) return;
 
     let processedUrl = url;
-    if (url.includes('15.165.41.165')) {
+    if (url.includes('3.35.71.175')) {
       try {
         const u = new URL(url);
         processedUrl = u.pathname + u.search;
