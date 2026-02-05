@@ -5,13 +5,10 @@ import { Input } from '@/app/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Badge } from '@/app/components/ui/badge';
-import { apiClient, Room as ApiRoom } from '@/app/api/client';
+import { apiClient, Room as ApiRoom, MixTrackSegment } from '@/app/api/client';
 
-// Extend the API Room type to include local UI state if needed, 
-// or simply map it. Ideally we should use the API type.
-// But the UI expects currentTrack. For now, since API doesn't give it, we'll make it optional/null.
 export interface Room extends ApiRoom {
-  // UI specific fields can be added here
+  current_playing?: MixTrackSegment | null;
 }
 
 interface RadioListProps {
@@ -69,7 +66,10 @@ export function RadioList({ onRoomSelect, onBack }: RadioListProps) {
     setError(null);
     try {
       const response = await apiClient.getRooms();
-      const allRooms: Room[] = response.rooms;
+      const allRooms: Room[] = response.rooms.map(item => ({
+        ...item.room,
+        current_playing: item.current_playing
+      }));
 
       // 인원이 0명인 방 식별
       const emptyRooms = allRooms.filter(room => room.participant_count === 0);
@@ -352,7 +352,11 @@ export function RadioList({ onRoomSelect, onBack }: RadioListProps) {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-gray-500 mb-0.5">현재 재생 정보</p>
                         <p className="font-medium truncate text-sm text-gray-300 group-hover:text-white transition-colors">
-                          준비 중이거나 곡 정보가 없습니다
+                          {room.current_playing ? (
+                            <>{room.current_playing.song_name} - {room.current_playing.artist_name}</>
+                          ) : (
+                            '재생 정보 없음'
+                          )}
                         </p>
                         <p className="text-xs text-gray-600 mt-1">방에 입장하여 확인하세요</p>
                       </div>

@@ -231,7 +231,9 @@ export function RadioRoom({ room, onBack }: RadioRoomProps) {
     const fetchRoomUpdate = async () => {
       try {
         const roomsRes = await apiClient.getRooms();
-        const found = roomsRes.rooms.find(r => r.room_id === room.room_id);
+        // Map the new nested structure back to Room objects for searching
+        const allRooms = roomsRes.rooms.map(item => item.room);
+        const found = allRooms.find(r => r.room_id === room.room_id);
         if (found) {
           setLocalRoom(found);
           setUserCount(prev => Math.max(prev, found.participant_count));
@@ -282,7 +284,7 @@ export function RadioRoom({ room, onBack }: RadioRoomProps) {
         setMessages(history);
 
         if (data.current_revision) {
-          setupAudio(data.current_revision.audio_url, data.current_revision.length_ms, data.play_started_at_epoch_ms);
+          setupAudio(data.current_revision.audio_url, data.current_revision.length_ms);
         }
 
         // Always update track info if list exists, even without active revision
@@ -307,19 +309,42 @@ export function RadioRoom({ room, onBack }: RadioRoomProps) {
 
       case 'revision_ready':
         if (audioRef.current && audioRef.current.src !== data.revision.audio_url) {
-          // New revision starts "now" relative to server
+          // Keep using the existing playStartedAtRef.current for live sync
           const nowSvr = getSvrNow();
-          playStartedAtRef.current = nowSvr;
           tracklistRef.current = data.tracklist;
 
-          updateTrackInfo(data.tracklist, nowSvr, nowSvr);
-          setupAudio(data.revision.audio_url, data.revision.length_ms, nowSvr);
+          updateTrackInfo(data.tracklist, playStartedAtRef.current, nowSvr);
+          setupAudio(data.revision.audio_url, data.revision.length_ms);
         }
         break;
     }
   };
 
-  const setupAudio = (url: string, durationMs: number, playStartedAt: number) => {
+  const syncPlaybackToLive = (durationSecOverride?: number) => {
+    if (!audioRef.current || !playStartedAtRef.current) return;
+    const audio = audioRef.current;
+
+    // Use state duration or override if called during setupAudio
+    const durSec = durationSecOverride !== undefined ? durationSecOverride : duration;
+    if (durSec <= 0) return;
+
+    const nowSvr = getSvrNow();
+    const realElapsedMs = nowSvr - playStartedAtRef.current;
+    const seekTime = Math.max(0, realElapsedMs / 1000);
+
+    console.log("Syncing to Live:", { nowSvr, playStartedAt: playStartedAtRef.current, realElapsedMs, seekTime, durSec });
+
+    if (seekTime < durSec) {
+      audio.currentTime = seekTime;
+      setCurrentTime(seekTime);
+      setIsPlaying(true);
+      setIsAutoplayBlocked(false);
+    } else {
+      setIsPlaying(false);
+    }
+  };
+
+  const setupAudio = (url: string, durationMs: number) => {
     if (!audioRef.current) return;
     const audio = audioRef.current;
 
@@ -335,25 +360,13 @@ export function RadioRoom({ room, onBack }: RadioRoomProps) {
     setCurrentAudioUrl(finalUrl);
     setDuration(durationMs / 1000);
 
-    const syncTime = () => {
-      const nowSvr = getSvrNow();
-      const realElapsedMs = nowSvr - playStartedAt;
-      const seekTime = Math.max(0, realElapsedMs / 1000);
-
-      if (seekTime < durationMs / 1000) {
-        audio.currentTime = seekTime;
-        setCurrentTime(seekTime);
-        setIsPlaying(true);
-      } else {
-        setIsPlaying(false);
-      }
-    };
+    const durSec = durationMs / 1000;
 
     if (audio.readyState >= 1) {
-      syncTime();
+      syncPlaybackToLive(durSec);
     } else {
       audio.onloadedmetadata = () => {
-        syncTime();
+        syncPlaybackToLive(durSec);
         audio.onloadedmetadata = null;
       };
     }
@@ -554,9 +567,8 @@ export function RadioRoom({ room, onBack }: RadioRoomProps) {
                         <Button
                           onClick={() => {
                             if (audioRef.current) {
+                              syncPlaybackToLive();
                               audioRef.current.play();
-                              setIsPlaying(true);
-                              setIsAutoplayBlocked(false);
                             }
                           }}
                           className="bg-pink-500 hover:bg-pink-600 text-white rounded-full p-6 shadow-[0_0_20px_rgba(236,72,153,0.5)]"

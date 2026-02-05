@@ -7,8 +7,13 @@ export interface Room {
   participant_count: number;
 }
 
+export interface RoomListItem {
+  room: Room;
+  current_playing: MixTrackSegment | null;
+}
+
 export interface RoomListResponse {
-  rooms: Room[];
+  rooms: RoomListItem[];
 }
 
 export interface MixRevision {
