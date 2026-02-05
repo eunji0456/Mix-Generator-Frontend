@@ -16,6 +16,23 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/v1': {
+        target: 'http://15.165.41.165',
+        changeOrigin: true,
+        ws: true,
+      },
+      '/media': {
+        target: 'http://15.165.41.165',
+        changeOrigin: true,
+      },
+      '/storage': {
+        target: 'http://15.165.41.165',
+        changeOrigin: true,
+      },
+    },
+  },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],

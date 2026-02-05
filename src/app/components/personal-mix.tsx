@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Plus, Upload, Trash2, Music, ArrowLeft } from 'lucide-react';
+import { Plus, Upload, Trash2, Music, ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
+import { apiClient, TrackMetadata, MixResponse } from '@/app/api/client';
 
 interface Track {
   id: string;
@@ -13,7 +14,7 @@ interface Track {
 }
 
 interface PersonalMixProps {
-  onMixCreated: (tracks: Track[]) => void;
+  onMixCreated: (mixId: string, initialData?: MixResponse) => void;
   onBack?: () => void;
 }
 
@@ -21,6 +22,7 @@ export function PersonalMix({ onMixCreated, onBack }: PersonalMixProps) {
   const [tracks, setTracks] = useState<Track[]>([
     { id: '1', artist: '', title: '', file: null, fileName: '' }
   ]);
+  const [isCreating, setIsCreating] = useState(false);
 
   const addTrack = () => {
     setTracks([
@@ -47,14 +49,37 @@ export function PersonalMix({ onMixCreated, onBack }: PersonalMixProps) {
     ));
   };
 
-  const handleMix = () => {
-    const validTracks = tracks.filter(track => track.artist && track.title);
+  const handleMix = async () => {
+    const validTracks = tracks.filter(track => track.artist && track.title && track.file);
     if (validTracks.length > 0) {
-      onMixCreated(validTracks);
+      setIsCreating(true);
+      try {
+        const files: File[] = [];
+        const metadatas: TrackMetadata[] = [];
+
+        validTracks.forEach(t => {
+          if (t.file) {
+            files.push(t.file);
+            metadatas.push({
+              artist: t.artist,
+              title: t.title
+            });
+          }
+        });
+
+        const response = await apiClient.createMix(files, metadatas);
+        // Pass full response for instant display
+        onMixCreated(response.mix_id, response);
+      } catch (err) {
+        console.error('Failed to create mix:', err);
+        alert('믹스 생성에 실패했습니다.');
+      } finally {
+        setIsCreating(false);
+      }
     }
   };
 
-  const canMix = tracks.some(track => track.artist && track.title);
+  const canMix = tracks.some(track => track.artist && track.title && track.file);
 
   return (
     <div className="min-h-screen bg-black p-8">
@@ -70,7 +95,7 @@ export function PersonalMix({ onMixCreated, onBack }: PersonalMixProps) {
             뒤로
           </Button>
         )}
-        
+
         <div className="mb-10">
           <h1 className="text-5xl mb-3 font-black tracking-tight">
             <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
@@ -86,12 +111,12 @@ export function PersonalMix({ onMixCreated, onBack }: PersonalMixProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {tracks.map((track, index) => (
+              {tracks.map((track) => (
                 <div key={track.id} className="flex gap-3 items-start p-4 bg-black rounded-lg border border-zinc-800 hover:border-cyan-500/50 transition-colors">
                   <div className="flex-shrink-0 w-10 h-10 bg-zinc-800 border border-cyan-500/50 rounded-lg flex items-center justify-center">
                     <Music className="size-5 text-cyan-400" />
                   </div>
-                  
+
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
                       <label className="text-xs text-gray-500 mb-1 block">가수</label>
@@ -102,7 +127,7 @@ export function PersonalMix({ onMixCreated, onBack }: PersonalMixProps) {
                         className="bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-600 focus:border-cyan-500"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="text-xs text-gray-500 mb-1 block">곡 이름</label>
                       <Input
@@ -112,7 +137,7 @@ export function PersonalMix({ onMixCreated, onBack }: PersonalMixProps) {
                         className="bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-600 focus:border-cyan-500"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="text-xs text-gray-500 mb-1 block">파일</label>
                       <div className="relative">
@@ -163,11 +188,18 @@ export function PersonalMix({ onMixCreated, onBack }: PersonalMixProps) {
         <div className="flex justify-center">
           <Button
             onClick={handleMix}
-            disabled={!canMix}
+            disabled={!canMix || isCreating}
             size="lg"
-            className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-12 shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] transition-all duration-300 disabled:opacity-50 disabled:shadow-none"
+            className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-12 disabled:opacity-50"
           >
-            믹스 생성
+            {isCreating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                믹스 생성 중...
+              </>
+            ) : (
+              '믹스 생성'
+            )}
           </Button>
         </div>
       </div>

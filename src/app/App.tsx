@@ -4,25 +4,19 @@ import { PersonalMix } from '@/app/components/personal-mix';
 import { MixPlayer } from '@/app/components/mix-player';
 import { RadioList, Room } from '@/app/components/radio-list';
 import { RadioRoom } from '@/app/components/radio-room';
-import { Button } from '@/app/components/ui/button';
+import { MixResponse } from '@/app/api/client';
 
 type Page = 'home' | 'personal-mix' | 'mix-player' | 'radio-list' | 'radio-room';
 
-interface Track {
-  id: string;
-  artist: string;
-  title: string;
-  file: File | null;
-  fileName: string;
-}
-
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
-  const [mixTracks, setMixTracks] = useState<Track[]>([]);
+  const [currentMixId, setCurrentMixId] = useState<string | null>(null);
+  const [initialMixData, setInitialMixData] = useState<MixResponse | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
-  const handleMixCreated = (tracks: Track[]) => {
-    setMixTracks(tracks);
+  const handleMixCreated = (mixId: string, initialData?: MixResponse) => {
+    setCurrentMixId(mixId);
+    if (initialData) setInitialMixData(initialData);
     setCurrentPage('mix-player');
   };
 
@@ -35,18 +29,22 @@ export default function App() {
     switch (currentPage) {
       case 'personal-mix':
         return <PersonalMix onMixCreated={handleMixCreated} onBack={() => setCurrentPage('home')} />;
-      
+
       case 'mix-player':
-        return (
+        return currentMixId ? (
           <MixPlayer
-            initialTracks={mixTracks}
-            onBack={() => setCurrentPage('personal-mix')}
+            mixId={currentMixId}
+            initialData={initialMixData || undefined}
+            onBack={() => {
+              setInitialMixData(null);
+              setCurrentPage('personal-mix');
+            }}
           />
-        );
-      
+        ) : null;
+
       case 'radio-list':
         return <RadioList onRoomSelect={handleRoomSelect} onBack={() => setCurrentPage('home')} />;
-      
+
       case 'radio-room':
         return selectedRoom ? (
           <RadioRoom
@@ -54,7 +52,7 @@ export default function App() {
             onBack={() => setCurrentPage('radio-list')}
           />
         ) : null;
-      
+
       default:
         return (
           <div className="min-h-screen bg-black flex items-center justify-center p-8">
@@ -82,17 +80,17 @@ export default function App() {
                   {/* Neon glow effect */}
                   <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/0 via-cyan-500/0 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500" />
-                  
+
                   <div className="relative z-10">
                     <div className="w-16 h-16 bg-zinc-800 border border-cyan-500/50 rounded-xl flex items-center justify-center mb-6 group-hover:border-cyan-400 group-hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-all duration-300">
                       <Music className="size-8 text-cyan-400" />
                     </div>
-                    
+
                     <h2 className="text-2xl mb-3 text-white font-semibold">개인 믹스</h2>
                     <p className="text-gray-400 mb-6 leading-relaxed">
-                      나만의 플레이리스트를 만들고<br/>최적의 순서로 자동 믹스합니다
+                      나만의 플레이리스트를 만들고<br />최적의 순서로 자동 믹스합니다
                     </p>
-                    
+
                     <div className="flex items-center text-cyan-400 font-medium">
                       시작하기
                       <span className="ml-2 group-hover:ml-4 transition-all duration-300">→</span>
@@ -108,17 +106,17 @@ export default function App() {
                   {/* Neon glow effect */}
                   <div className="absolute inset-0 bg-gradient-to-br from-pink-500/0 via-pink-500/0 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 to-purple-500 rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500" />
-                  
+
                   <div className="relative z-10">
                     <div className="w-16 h-16 bg-zinc-800 border border-pink-500/50 rounded-xl flex items-center justify-center mb-6 group-hover:border-pink-400 group-hover:shadow-[0_0_20px_rgba(236,72,153,0.5)] transition-all duration-300">
                       <RadioIcon className="size-8 text-pink-400" />
                     </div>
-                    
+
                     <h2 className="text-2xl mb-3 text-white font-semibold">라디오</h2>
                     <p className="text-gray-400 mb-6 leading-relaxed">
-                      다른 사람들과 함께<br/>실시간으로 음악을 공유하고 즐겨보세요
+                      다른 사람들과 함께<br />실시간으로 음악을 공유하고 즐겨보세요
                     </p>
-                    
+
                     <div className="flex items-center text-pink-400 font-medium">
                       시작하기
                       <span className="ml-2 group-hover:ml-4 transition-all duration-300">→</span>
